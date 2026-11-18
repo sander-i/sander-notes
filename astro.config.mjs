@@ -1,13 +1,24 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
+const site = process.env.SITE_URL ?? 'https://sander.cloudzyro.app';
+const base = process.env.BASE_PATH ?? '/';
+const baseUrl = new URL(base, site).href.replace(/\/$/, '');
+
 export default defineConfig({
-  site: 'https://sander.gitlab.io',
-  base: '/blog',
+  site,
+  base,
   outDir: './dist/blog',
   publicDir: './static',
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      filter: (page) =>
+        !page.endsWith('/search/') && !page.endsWith('/404/') && page !== baseUrl,
+    }),
+  ],
   markdown: {
-    shikiConfig: { theme: 'github-light' },
+    shikiConfig: {
+      themes: { light: 'github-light', dark: 'github-dark' },
+    },
   },
 });

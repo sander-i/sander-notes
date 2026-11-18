@@ -1,22 +1,22 @@
 # sander-notes
 
-Sander 的个人博客。Astro 5 静态站，部署到 GitLab Pages，站内搜索由 Pagefind 在构建时生成。
+Sander 的个人博客。Astro 7 静态站，部署到 Cloudzyro，站内搜索由 Pagefind 在构建时生成。
 
-线上地址：<https://sander.gitlab.io/blog/>
+线上地址：<https://sander.cloudzyro.app/>
 
 ## 环境要求
 
-- Node.js 22（CI 使用 `node:22-alpine`，本地建议同大版本）
+- Node.js ≥22.23.4（CI 使用 `node:22-alpine`，本地建议同大版本）
 - npm（仓库使用 `package-lock.json`；`yarn.lock` 已移除）
 
 ## 命令
 
 ```bash
 npm ci          # 安装依赖
-npm run dev     # 开发服务器 http://localhost:4321/blog
+npm run dev     # 开发服务器 http://localhost:4321/
 npm run check   # Astro 类型与内容检查
-npm run build   # 构建到 dist/blog，并生成 Pagefind 搜索索引
-npm run preview # 预览构建产物 http://localhost:4321/blog
+npm run build   # 构建到 dist/blog，生成 Pagefind 搜索索引与 /404 路由
+npm run preview # 预览构建产物 http://localhost:4321/
 ```
 
 注意：Pagefind 索引只在 `npm run build` 时生成，`npm run dev` 下搜索页不可用，属预期行为。
@@ -30,12 +30,13 @@ npm run preview # 预览构建产物 http://localhost:4321/blog
 | `src/layouts/BaseLayout.astro` | 全站布局、导航、主题切换 |
 | `src/styles/global.css` | 全站样式与配色 |
 | `scripts/build-search.mjs` | 构建后生成 Pagefind 索引 |
-| `static/` | 原样复制的静态资源（favicon、robots.txt 等） |
+| `scripts/build-404.mjs` | 将 `404.html` 复制为 `/404` 路由 |
+| `static/` | 原样复制的静态资源（favicon 等） |
 | `dist/blog/` | 构建产物（不提交） |
 
 ## 写文章
 
-在 `src/content/posts/` 新建 `.md`，文件名即 URL slug（`hello-world.md` → `/blog/posts/hello-world/`）：
+在 `src/content/posts/` 新建 `.md`，文件名即 URL slug（`hello-world.md` → `/posts/hello-world/`）：
 
 ```yaml
 ---
@@ -52,7 +53,7 @@ draft: false # true 时不构建、不进列表与 RSS
 
 ## 评论（可选）
 
-评论使用 Giscus。未配置时评论区不渲染。在 GitLab CI 变量或本地 `.env` 中设置以下变量（均为 `PUBLIC_` 前缀，构建期内联到页面）：
+评论使用 Giscus。未配置时评论区不渲染。在 CI 变量或本地 `.env` 中设置以下变量（均为 `PUBLIC_` 前缀，构建期内联到页面）：
 
 ```
 PUBLIC_GISCUS_REPO=owner/repo
@@ -65,16 +66,22 @@ PUBLIC_GISCUS_CATEGORY_ID=
 
 ## 部署
 
-`.gitlab-ci.yml` 在 `master` 分支运行：
+默认构建目标为 Cloudzyro：`site` = `https://sander.cloudzyro.app`，`base` = `/`。产物在 `dist/blog/`，将该目录内容作为站点根发布。
 
-1. `npm ci`
-2. `npm run check`
-3. `npm run build`（Astro + Pagefind）
-4. 将 `dist/blog/` 复制到 `public/`，作为 GitLab Pages 产物
+`site` 与 `base` 可用环境变量覆盖（PowerShell 用 `$env:NAME="值"`）：
 
-站点路径由 `astro.config.mjs` 的 `site` 与 `base` 决定（当前为 `https://sander.gitlab.io` + `/blog`）。若 GitLab 默认分支不是 `master`，需同步修改 `.gitlab-ci.yml` 的 `only`。
+```bash
+SITE_URL=https://sander.cloudzyro.app BASE_PATH=/ npm run build
+SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
+```
 
-GitLab 项目与 Pages 的可见性必须为公开，否则站点会 302 到登录页。
+构建步骤：
+
+1. `astro build`
+2. `node scripts/build-search.mjs`（Pagefind 索引）
+3. `node scripts/build-404.mjs`（复制 `404.html` 为 `/404` 路由）
+
+`.gitlab-ci.yml` 在 `master` 分支使用 `https://sander.gitlab.io` + `/blog` 构建并发布到 GitLab Pages。若 GitLab 默认分支不是 `master`，需同步修改 `only`。GitLab 项目与 Pages 的可见性必须为公开，否则站点会 302 到登录页。
 
 ## 许可
 

@@ -5,3 +5,5 @@ declare global {
     PagefindUI: new (options: Record<string, unknown>) => unknown;
   }
 }
+
+export {};

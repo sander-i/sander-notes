@@ -4,12 +4,15 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, ogType = 'website', noindex = false } = Astro.props;
 const siteTitle = 'Sander 的博客';
 const pageTitle = title === '首页' ? siteTitle : `${title} | ${siteTitle}`;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const canonical = new URL(Astro.url.pathname.replace(/\/?$/, '/'), Astro.site ?? Astro.url).href;
 ---
 <!doctype html>
 <html lang="zh-CN" data-theme="light" data-base={base}>
@@ -20,8 +23,17 @@ const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
     <meta name="description" content={description} />
     <meta name="generator" content="Astro" />
     <title>{pageTitle}</title>
+    <link rel="icon" type="image/svg+xml" href={base + 'favicon.svg'} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
     <link rel="alternate" type="application/rss+xml" title={siteTitle} href={base + 'rss.xml'} />
     <link rel="sitemap" href={base + 'sitemap-index.xml'} />
+    <slot name="head" />
     <script is:inline>
       (() => {
         const stored = localStorage.getItem('theme');
@@ -34,12 +46,12 @@ const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
     <a class="skip-link" href="#main">跳到正文</a>
     <div class="site-shell">
       <header class="site-header">
-        <a class="wordmark" href={base} aria-label="Sander 的博客首页">Sander<span>的博客</span></a>
+        <a class="wordmark" href={base} aria-label="Sander 首页">Sander</a>
         <nav aria-label="主导航">
           <a href={base}>文章</a>
           <a href={base + 'search/'}>搜索</a>
           <a href={base + 'rss.xml'}>RSS</a>
-          <button class="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色模式">
+          <button class="theme-toggle" type="button" aria-label="切换深色模式" aria-pressed="false" title="切换深色模式">
             <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
             <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.3A8.6 8.6 0 0 1 8.7 3.6 8.7 8.7 0 1 0 20.4 15.3Z"/></svg>
           </button>
@@ -50,15 +62,26 @@ const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
       </main>
       <footer class="site-footer">
         <span>© {new Date().getFullYear()} Sander</span>
-        <span>由 Astro 生成，轻量静态发布</span>
+        <span>执着于理想，纯粹于当下</span>
       </footer>
     </div>
     <script>
       const button = document.querySelector<HTMLButtonElement>('.theme-toggle');
+      const syncToggle = () => {
+        if (!button) return;
+        const dark = document.documentElement.dataset.theme === 'dark';
+        const label = dark ? '切换浅色模式' : '切换深色模式';
+        button.setAttribute('aria-pressed', String(dark));
+        button.setAttribute('aria-label', label);
+        button.title = label;
+      };
+      syncToggle();
       button?.addEventListener('click', () => {
         const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
         document.documentElement.dataset.theme = next;
         localStorage.setItem('theme', next);
+        syncToggle();
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: next } }));
       });
     </script>
   </body>

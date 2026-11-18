@@ -3,37 +3,38 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 ---
 <BaseLayout title="搜索" description="搜索博客文章。">
-  <section class="search-page">
+  <Fragment slot="head">
     <link rel="stylesheet" href={base + 'pagefind/pagefind-ui.css'} />
+  </Fragment>
+  <section class="search-page">
     <a class="back-link" href={base}>所有文章</a>
     <h1>搜索文章</h1>
     <div id="search" class="search-box"></div>
     <p class="search-hint">输入标题、内容或标签。</p>
   </section>
+  <script>
+    const mount = document.querySelector('#search');
+    if (mount) {
+      const script = document.createElement('script');
+      script.src = `${document.documentElement.dataset.base}pagefind/pagefind-ui.js`;
+      script.onload = () => {
+        new window.PagefindUI({
+          element: '#search',
+          showSubResults: true,
+          showImages: false,
+          translations: {
+            placeholder: '搜索文章',
+            clear_search: '清除',
+            load_more: '加载更多',
+            search_label: '搜索博客文章',
+            filters_label: '筛选',
+            zero_results: '没有找到“[SEARCH_TERM]”相关内容',
+            many_results: '找到 [COUNT] 篇文章（[TIME] 毫秒）',
+            one_result: '找到 1 篇文章（[TIME] 毫秒）',
+          },
+        });
+      };
+      document.head.append(script);
+    }
+  </script>
 </BaseLayout>
-<script>
-  const mount = document.querySelector('#search');
-  if (mount) {
-    const script = document.createElement('script');
-    script.src = `${document.documentElement.dataset.base}pagefind/pagefind-ui.js`;
-    script.onload = () => {
-      const PagefindUI = (window as unknown as { PagefindUI: new (options: Record<string, unknown>) => unknown }).PagefindUI;
-      new PagefindUI({
-      element: '#search',
-      showSubResults: true,
-      showImages: false,
-      translations: {
-        placeholder: '搜索文章',
-        clear_search: '清除',
-        load_more: '加载更多',
-        search_label: '搜索博客文章',
-        filters_label: '筛选',
-        zero_results: '没有找到“[SEARCH_TERM]”相关内容',
-        many_results: '找到 [COUNT] 篇文章（[TIME] 毫秒）',
-        one_result: '找到 1 篇文章（[TIME] 毫秒）',
-      },
-      });
-    };
-    document.head.append(script);
-  }
-</script>
