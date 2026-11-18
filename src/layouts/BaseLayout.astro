@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { analytics } from '../lib/analytics';
 
 interface Props {
   title: string;
@@ -41,6 +42,27 @@ const canonical = new URL(Astro.url.pathname.replace(/\/?$/, '/'), Astro.site ??
         document.documentElement.dataset.theme = stored || preference;
       })();
     </script>
+    {analytics.enabled && (
+      <>
+        <script define:vars={{ basePath: analytics.basePath }}>
+          window.goatcounter = {
+            path: function (p) {
+              var path = p || '/';
+              if (basePath && (path === basePath || path.indexOf(basePath + '/') === 0)) {
+                path = path.slice(basePath.length) || '/';
+              }
+              return '/' + location.hostname + path;
+            },
+          };
+        </script>
+        <script
+          is:inline
+          async
+          src="//gc.zgo.at/count.js"
+          data-goatcounter={`https://${analytics.code}.goatcounter.com/count`}
+        />
+      </>
+    )}
   </head>
   <body>
     <a class="skip-link" href="#main">跳到正文</a>

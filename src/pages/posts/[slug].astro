@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { dateLabel } from '../../lib/date';
+import { analytics } from '../../lib/analytics';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
@@ -21,6 +22,7 @@ const commentsConfig = {
   categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '',
 };
 const commentsReady = Object.values(commentsConfig).every(Boolean);
+const viewsPath = analytics.normalizePath(Astro.url.pathname);
 ---
 <BaseLayout title={post.data.title} description={post.data.description} ogType="article">
   <article class="article" data-pagefind-body>
@@ -29,6 +31,16 @@ const commentsReady = Object.values(commentsConfig).every(Boolean);
       <h1>{post.data.title}</h1>
       <p class="article-meta"><time datetime={post.data.pubDate.toISOString()}>{dateLabel(post.data.pubDate)}</time>{post.data.updatedDate && <span>更新于 <time datetime={post.data.updatedDate.toISOString()}>{dateLabel(post.data.updatedDate)}</time></span>}{post.data.tags.length > 0 && <span>{post.data.tags.join('、')}</span>}</p>
       <p class="article-description">{post.data.description}</p>
+      {analytics.enabled && (
+        <p class="article-views">
+          <span
+            data-goatcounter-views
+            data-code={analytics.code}
+            data-hosts={analytics.hosts.join(',')}
+            data-path={viewsPath}
+          ></span>
+        </p>
+      )}
     </header>
     <div class="prose"><Content /></div>
   </article>
@@ -65,5 +77,27 @@ const commentsReady = Object.values(commentsConfig).every(Boolean);
       observer.observe(document.body, { childList: true, subtree: true });
     }
     window.addEventListener('themechange', applyGiscusTheme);
+  </script>
+  <script>
+    // 各部署目标分别计数，页面显示的是同一篇文章在各站点的合计。
+    const viewsEl = document.querySelector<HTMLElement>('[data-goatcounter-views]');
+    const parseCount = (value: unknown) => Number(String(value ?? '').replace(/[^\d]/g, '')) || 0;
+    if (viewsEl) {
+      const { code, hosts, path } = viewsEl.dataset;
+      const paths = (hosts ?? '').split(',').filter(Boolean).map((host) => `/${host}${path}`);
+      if (code && paths.length > 0) {
+        Promise.all(
+          paths.map((p) =>
+            fetch(`https://${code}.goatcounter.com/counter/${p}.json`)
+              .then((res) => res.json())
+              .then((data) => parseCount(data.count))
+              .catch(() => 0),
+          ),
+        ).then((counts) => {
+          const total = counts.reduce((sum, n) => sum + n, 0);
+          viewsEl.textContent = total > 0 ? `阅读 ${total.toLocaleString('zh-CN')} 次` : '';
+        });
+      }
+    }
   </script>
 </BaseLayout>

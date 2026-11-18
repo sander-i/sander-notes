@@ -68,6 +68,8 @@ main { min-height: calc(100vh - 160px); }
 .article-header h1 { margin-top: 28px; font-size: clamp(32px, 5vw, 44px); }
 .article-meta { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 0; color: var(--muted); font-size: 14px; }
 .article-description { margin: 22px 0 0; padding-left: 16px; border-left: 3px solid var(--accent); color: var(--muted); }
+.article-views { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+.article-views span:empty { display: none; }
 .prose { margin-top: 40px; font-family: Georgia, 'Noto Serif SC', serif; font-size: 17px; line-height: 1.9; overflow-wrap: anywhere; }
 .prose h2, .prose h3 { margin: 1.8em 0 0.6em; font-family: system-ui, sans-serif; line-height: 1.35; }
 .prose h2 { font-size: 25px; }

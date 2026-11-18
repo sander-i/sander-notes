@@ -64,6 +64,26 @@ PUBLIC_GISCUS_CATEGORY_ID=
 
 取值方法见 <https://giscus.app/zh-CN>。参考 `.env.example`。
 
+## 访问统计（GoatCounter）
+
+使用 GoatCounter，无 cookie，默认按「访问」而非「页面加载」计数（同一会话 8 小时内重复刷新同一路径只算 1 次）。
+
+配置项（构建期内联到页面，可写在 `.env` 或 CI 变量）：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PUBLIC_GOATCOUNTER_CODE` | `sander` | GoatCounter 站点 code，即 `https://<code>.goatcounter.com` |
+| `PUBLIC_GOATCOUNTER_HOSTS` | `sander.cloudzyro.app,sander-i.github.io` | 需要合并统计的部署域名，逗号分隔 |
+
+实现要点：
+
+- `src/lib/analytics.ts` 统一读取配置，并把 `BASE_PATH` 前缀剥掉，使 `/posts/x/` 与 `/sander-notes/posts/x/` 归一到同一路径。
+- 上报路径为 `/<hostname><归一化路径>`，例如 `/sander.cloudzyro.app/posts/x/`。GoatCounter 面板里按该前缀即可分别查看主站与备用站。
+- 文章页显示的数字是各域名之和：`src/pages/posts/[slug].astro` 里的脚本按 `PUBLIC_GOATCOUNTER_HOSTS` 逐个请求 `https://<code>.goatcounter.com/counter/<path>.json` 后相加。
+- 计数接口响应缓存最长 4 小时，新访问不会立刻反映；`count` 是带千分位的字符串，脚本里已剥掉非数字字符。
+- 需在 GoatCounter 后台 Settings 打开 **allow using the visitor counter**，否则计数接口返回 403 `Need to enable the 'allow using the visitor counter' setting`。
+- 本地 `localhost` 不会被上报（count.js 默认跳过），也不计广告拦截器挡掉的请求。
+
 ## 部署
 
 默认构建目标为 Cloudzyro：`site` = `https://sander.cloudzyro.app`，`base` = `/`。产物在 `dist/`，将该目录内容作为站点根发布。
