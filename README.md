@@ -75,6 +75,12 @@ SITE_URL=https://sander.cloudzyro.app BASE_PATH=/ npm run build
 SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
 ```
 
+Git Bash 会把 `/sander-notes` 这类以斜杠开头的值转成 Windows 路径，需加 `MSYS_NO_PATHCONV=1`：
+
+```bash
+MSYS_NO_PATHCONV=1 SITE_URL=https://sander-i.github.io BASE_PATH=/sander-notes npm run build
+```
+
 构建步骤：
 
 1. `astro build`
@@ -94,6 +100,15 @@ SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
 首次连接需在控制台授权：打开 <https://console.cloudzyro.com/sander/sites/std2b35152555f579a> 的 Settings → Repository → Connect GitHub，授权并选择 `sander-i/sander-notes`，Branch 选 `deploy`，Folder 留空，点击 Deploy site。
 
 连接后该站点只能通过 Git 发布；上传与 AI 工具不能部署，需先 Disconnect。`.github/workflows/ci.yml` 在 Pull Request 上只做校验。
+
+### GitHub Pages 备用站
+
+`.github/workflows/pages.yml` 在每次 `master` push 时另行构建并发布：
+
+- 地址：<https://sander-i.github.io/sander-notes/>
+- 构建环境：`SITE_URL=https://sander-i.github.io`、`BASE_PATH=/sander-notes`
+- 首次运行需在仓库 Settings → Pages 将 Source 设为 **GitHub Actions**；workflow 会尝试自动启用
+- 与 Cloudzyro 的 `deploy` 分支互不影响
 
 ## 许可
 
