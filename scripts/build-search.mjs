@@ -6,11 +6,11 @@ if (!index || errors.length) {
 }
 
 try {
-  const result = await index.addDirectory({ path: './dist/blog', glob: '**/*.html' });
+  const result = await index.addDirectory({ path: './dist', glob: '**/*.html' });
   if (result.errors.length) {
     throw new Error(`Pagefind indexing failed: ${result.errors.join('; ')}`);
   }
-  const written = await index.writeFiles({ outputPath: './dist/blog/pagefind' });
+  const written = await index.writeFiles({ outputPath: './dist/pagefind' });
   if (written.errors.length) {
     throw new Error(`Pagefind output failed: ${written.errors.join('; ')}`);
   }

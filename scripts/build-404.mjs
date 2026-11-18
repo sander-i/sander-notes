@@ -1,8 +1,8 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-const source = './dist/blog/404.html';
-const target = './dist/blog/404/index.html';
+const source = './dist/404.html';
+const target = './dist/404/index.html';
 
 try {
   await mkdir(dirname(target), { recursive: true });

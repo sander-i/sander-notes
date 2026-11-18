@@ -15,7 +15,7 @@ Sander 的个人博客。Astro 7 静态站，部署到 Cloudzyro，站内搜索�
 npm ci          # 安装依赖
 npm run dev     # 开发服务器 http://localhost:4321/
 npm run check   # Astro 类型与内容检查
-npm run build   # 构建到 dist/blog，生成 Pagefind 搜索索引与 /404 路由
+npm run build   # 构建到 dist，生成 Pagefind 搜索索引与 /404 路由
 npm run preview # 预览构建产物 http://localhost:4321/
 ```
 
@@ -32,7 +32,7 @@ npm run preview # 预览构建产物 http://localhost:4321/
 | `scripts/build-search.mjs` | 构建后生成 Pagefind 索引 |
 | `scripts/build-404.mjs` | 将 `404.html` 复制为 `/404` 路由 |
 | `static/` | 原样复制的静态资源（favicon 等） |
-| `dist/blog/` | 构建产物（不提交） |
+| `dist/` | 构建产物（不提交） |
 
 ## 写文章
 
@@ -66,7 +66,7 @@ PUBLIC_GISCUS_CATEGORY_ID=
 
 ## 部署
 
-默认构建目标为 Cloudzyro：`site` = `https://sander.cloudzyro.app`，`base` = `/`。产物在 `dist/blog/`，将该目录内容作为站点根发布。
+默认构建目标为 Cloudzyro：`site` = `https://sander.cloudzyro.app`，`base` = `/`。产物在 `dist/`，将该目录内容作为站点根发布。
 
 `site` 与 `base` 可用环境变量覆盖（PowerShell 用 `$env:NAME="值"`）：
 
@@ -82,6 +82,16 @@ SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
 3. `node scripts/build-404.mjs`（复制 `404.html` 为 `/404` 路由）
 
 `.gitlab-ci.yml` 在 `master` 分支使用 `https://sander.gitlab.io` + `/blog` 构建并发布到 GitLab Pages。若 GitLab 默认分支不是 `master`，需同步修改 `only`。GitLab 项目与 Pages 的可见性必须为公开，否则站点会 302 到登录页。
+
+### Cloudzyro 自动部署
+
+Cloudzyro 支持直接连接 GitHub 仓库，push 后自动构建并发布，无需部署令牌：
+
+1. 打开 <https://console.cloudzyro.com/sander/sites/std2b35152555f579a> 的 Settings。
+2. Repository → Connect GitHub，授权并选择 `sander-i/sander-notes`。
+3. 分支选 `master`，Folder 留空，点击 Deploy site。
+
+连接后 Cloudzyro 运行 `npm ci && npm run build`，发布 `dist/`。`.github/workflows/ci.yml` 只做推送前校验，不负责部署。
 
 ## 许可
 

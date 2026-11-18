@@ -8,7 +8,7 @@ const baseUrl = new URL(base, site).href.replace(/\/$/, '');
 export default defineConfig({
   site,
   base,
-  outDir: './dist/blog',
+  outDir: './dist',
   publicDir: './static',
   integrations: [
     sitemap({
