@@ -85,13 +85,15 @@ SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
 
 ### Cloudzyro 自动部署
 
-Cloudzyro 支持直接连接 GitHub 仓库，push 后自动构建并发布，无需部署令牌：
+构建在 GitHub Actions 完成，Cloudzyro 只托管静态文件：
 
-1. 打开 <https://console.cloudzyro.com/sander/sites/std2b35152555f579a> 的 Settings。
-2. Repository → Connect GitHub，授权并选择 `sander-i/sander-notes`。
-3. 分支选 `master`，Folder 留空，点击 Deploy site。
+1. `master` 有新提交时，`.github/workflows/deploy.yml` 运行 `npm ci`、`npm run check`、`npm run build`。
+2. 构建产物 `dist/` 推送到 `deploy` 分支（单次提交，无 `package.json`）。
+3. Cloudzyro 连接仓库的 `deploy` 分支，按静态站直接发布，不再执行构建。
 
-连接后 Cloudzyro 运行 `npm ci && npm run build`，发布 `dist/`。`.github/workflows/ci.yml` 只做推送前校验，不负责部署。
+首次连接需在控制台授权：打开 <https://console.cloudzyro.com/sander/sites/std2b35152555f579a> 的 Settings → Repository → Connect GitHub，授权并选择 `sander-i/sander-notes`，Branch 选 `deploy`，Folder 留空，点击 Deploy site。
+
+连接后该站点只能通过 Git 发布；上传与 AI 工具不能部署，需先 Disconnect。`.github/workflows/ci.yml` 在 Pull Request 上只做校验。
 
 ## 许可
 
