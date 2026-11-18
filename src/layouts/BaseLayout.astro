@@ -1,0 +1,65 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const siteTitle = 'Sander 的博客';
+const pageTitle = title === '首页' ? siteTitle : `${title} | ${siteTitle}`;
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+---
+<!doctype html>
+<html lang="zh-CN" data-theme="light" data-base={base}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content={description} />
+    <meta name="generator" content="Astro" />
+    <title>{pageTitle}</title>
+    <link rel="alternate" type="application/rss+xml" title={siteTitle} href={base + 'rss.xml'} />
+    <link rel="sitemap" href={base + 'sitemap-index.xml'} />
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('theme');
+        const preference = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = stored || preference;
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="wordmark" href={base} aria-label="Sander 的博客首页">Sander<span>的博客</span></a>
+        <nav aria-label="主导航">
+          <a href={base}>文章</a>
+          <a href={base + 'search/'}>搜索</a>
+          <a href={base + 'rss.xml'}>RSS</a>
+          <button class="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色模式">
+            <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.3A8.6 8.6 0 0 1 8.7 3.6 8.7 8.7 0 1 0 20.4 15.3Z"/></svg>
+          </button>
+        </nav>
+      </header>
+      <main id="main">
+        <slot />
+      </main>
+      <footer class="site-footer">
+        <span>© {new Date().getFullYear()} Sander</span>
+        <span>由 Astro 生成，轻量静态发布</span>
+      </footer>
+    </div>
+    <script>
+      const button = document.querySelector<HTMLButtonElement>('.theme-toggle');
+      button?.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+      });
+    </script>
+  </body>
+</html>

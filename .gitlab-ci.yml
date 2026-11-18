@@ -1,0 +1,25 @@
+image: node:22-alpine
+
+stages:
+  - build
+
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - node_modules/
+
+pages:
+  stage: build
+  script:
+    - npm ci
+    - npm run check
+    - npm run build
+    - mkdir -p public
+    - cp -R dist/blog/. public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

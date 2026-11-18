@@ -1,0 +1,12 @@
+node_modules/
+public/
+dist/
+.astro/
+pagefind/
+.DS_Store
+Thumbs.db
+db.json
+*.log
+.deploy*/
+_multiconfig.yml
+.idea/

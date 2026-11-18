@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.id.replace(/\.md$/, '') },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const commentsConfig = {
+  repo: import.meta.env.PUBLIC_GISCUS_REPO ?? '',
+  repoId: import.meta.env.PUBLIC_GISCUS_REPO_ID ?? '',
+  category: import.meta.env.PUBLIC_GISCUS_CATEGORY ?? '',
+  categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '',
+};
+const commentsReady = Object.values(commentsConfig).every(Boolean);
+const dateLabel = (date: Date) => new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai',
+}).format(date);
+---
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <article class="article" data-pagefind-body>
+    <header class="article-header">
+      <a class="back-link" href={base}>所有文章</a>
+      <h1>{post.data.title}</h1>
+      <p class="article-meta"><time datetime={post.data.pubDate.toISOString()}>{dateLabel(post.data.pubDate)}</time>{post.data.tags.length > 0 && <span>{post.data.tags.join('、')}</span>}</p>
+      <p class="article-description">{post.data.description}</p>
+    </header>
+    <div class="prose"><Content /></div>
+  </article>
+  {commentsReady && (
+    <section class="comments" aria-labelledby="comments-title">
+      <h2 id="comments-title">评论</h2>
+      <script src="https://giscus.app/client.js" data-repo={commentsConfig.repo} data-repo-id={commentsConfig.repoId} data-category={commentsConfig.category} data-category-id={commentsConfig.categoryId} data-mapping="pathname" data-strict="0" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="preferred_color_scheme" data-lang="zh-CN" crossorigin="anonymous" async></script>
+    </section>
+  )}
+</BaseLayout>
