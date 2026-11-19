@@ -5,6 +5,7 @@ public/
 !.env.example
 dist/
 .astro/
+.wrangler/
 pagefind/
 .DS_Store
 Thumbs.db

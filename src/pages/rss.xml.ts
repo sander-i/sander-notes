@@ -4,7 +4,7 @@ import { getCollection } from 'astro:content';
 export async function GET(context: APIContext) {
   const posts = (await getCollection('posts', ({ data }) => !data.draft))
     .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-  const base = context.site ?? new URL('https://sander.cloudzyro.app');
+  const base = context.site ?? new URL('https://sander-notes.sander-o.workers.dev');
   const prefix = import.meta.env.BASE_URL.replace(/\/$/, '');
   const items = posts.map((post) => {
     const route = `${prefix}/posts/${post.id.replace(/\.md$/, '')}/`;

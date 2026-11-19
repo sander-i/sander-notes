@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 ---
-<BaseLayout title="搜索" description="搜索博客文章。">
+<BaseLayout title="搜索" description="搜索博客文章。" noindex>
   <Fragment slot="head">
     <link rel="stylesheet" href={base + 'pagefind/pagefind-ui.css'} />
   </Fragment>

@@ -3,11 +3,15 @@
   "type": "module",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.23.4"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/build-search.mjs && node scripts/build-404.mjs",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.5",
@@ -16,6 +20,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wrangler": "^4.165.0"
   }
 }

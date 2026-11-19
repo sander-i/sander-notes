@@ -1,6 +1,6 @@
 // GoatCounter 配置。site code 本身会出现在页面 HTML 里，不是秘密。
 const code = (import.meta.env.PUBLIC_GOATCOUNTER_CODE ?? 'sander').trim();
-const hosts = (import.meta.env.PUBLIC_GOATCOUNTER_HOSTS ?? 'sander.cloudzyro.app,sander-i.github.io')
+const hosts = (import.meta.env.PUBLIC_GOATCOUNTER_HOSTS ?? 'sander-notes.sander-o.workers.dev,sander.cloudzyro.app,sander-i.github.io')
   .split(',')
   .map((host: string) => host.trim())
   .filter(Boolean);
