@@ -6,7 +6,7 @@ Sander 的个人博客。Astro 7 静态站，部署到 Cloudzyro，站内搜索�
 
 ## 环境要求
 
-- Node.js ≥22.23.4（CI 使用 `node:22-alpine`，本地建议同大版本）
+- Node.js ≥22.23.4（GitHub Actions 使用 Node 24）
 - npm（仓库使用 `package-lock.json`；`yarn.lock` 已移除）
 
 ## 命令
@@ -92,7 +92,6 @@ PUBLIC_GISCUS_CATEGORY_ID=
 
 ```bash
 SITE_URL=https://sander.cloudzyro.app BASE_PATH=/ npm run build
-SITE_URL=https://sander.gitlab.io BASE_PATH=/blog npm run build   # GitLab Pages
 ```
 
 Git Bash 会把 `/sander-notes` 这类以斜杠开头的值转成 Windows 路径，需加 `MSYS_NO_PATHCONV=1`：
@@ -106,8 +105,6 @@ MSYS_NO_PATHCONV=1 SITE_URL=https://sander-i.github.io BASE_PATH=/sander-notes n
 1. `astro build`
 2. `node scripts/build-search.mjs`（Pagefind 索引）
 3. `node scripts/build-404.mjs`（复制 `404.html` 为 `/404` 路由）
-
-`.gitlab-ci.yml` 在 `master` 分支使用 `https://sander.gitlab.io` + `/blog` 构建并发布到 GitLab Pages。若 GitLab 默认分支不是 `master`，需同步修改 `only`。GitLab 项目与 Pages 的可见性必须为公开，否则站点会 302 到登录页。
 
 ### Cloudzyro 自动部署
 
