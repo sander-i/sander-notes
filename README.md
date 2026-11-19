@@ -59,9 +59,11 @@ draft: false # true 时不构建、不进列表与 RSS
 
 字段定义见 `src/content.config.ts`。文章正文容器带 `data-pagefind-body`，只有文章页进入搜索索引。
 
-## 评论（可选）
+## 评论
 
-评论使用 Giscus。未配置时评论区不渲染。在本地 `.env` 或构建平台的 env 中设置以下变量（均为 `PUBLIC_` 前缀，构建期内联到页面）：
+评论使用 Giscus。仓库、分类等参数在 `src/pages/posts/[slug].astro` 里已有默认值，正常构建无需配置任何环境变量。这些值会出现在页面 HTML 里，不是秘密。
+
+需要换仓库或分类时，在本地 `.env` 或构建平台的 env 里覆盖（均为 `PUBLIC_` 前缀，构建期内联到页面）：
 
 ```
 PUBLIC_GISCUS_REPO=owner/repo
@@ -72,7 +74,7 @@ PUBLIC_GISCUS_CATEGORY_ID=
 
 取值方法见 <https://giscus.app/zh-CN>。参考 `.env.example`。
 
-仓库需先启用 Discussions 并安装 [giscus App](https://github.com/apps/giscus)，否则即使变量填满，评论框也不会显示内容。仓库 Variables 里的 `PUBLIC_GISCUS_*` 不会自动进入构建：若走 GitHub Actions，需在 workflow 的 build step 显式映射，例如 `PUBLIC_GISCUS_REPO: ${{ vars.PUBLIC_GISCUS_REPO }}`，四项都要加。
+仓库需先启用 Discussions 并安装 [giscus App](https://github.com/apps/giscus)，否则评论框会显示报错。GitHub Actions 里的覆盖值需在 workflow 的 build step 显式映射，例如 `PUBLIC_GISCUS_REPO: ${{ vars.PUBLIC_GISCUS_REPO }}`，四项都要加。
 
 评论按文章标题匹配（`data-mapping="title"`），不同部署域名共用同一讨论；改标题会导致旧评论失联。
 

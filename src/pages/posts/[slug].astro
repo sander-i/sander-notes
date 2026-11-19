@@ -15,11 +15,15 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content } = await render(post);
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+// 这些值会直接出现在页面 HTML 里，不是秘密。给默认值是为了让本地、CI 和
+// Workers Builds 三条构建链路都不用额外配环境变量就能渲染评论区。
+// 注意空字符串要回落到默认值：CI 里未定义的 vars.* 会被展开成空串。
+const envOr = (value: string | undefined, fallback: string) => (value?.trim() ? value.trim() : fallback);
 const commentsConfig = {
-  repo: import.meta.env.PUBLIC_GISCUS_REPO ?? '',
-  repoId: import.meta.env.PUBLIC_GISCUS_REPO_ID ?? '',
-  category: import.meta.env.PUBLIC_GISCUS_CATEGORY ?? '',
-  categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '',
+  repo: envOr(import.meta.env.PUBLIC_GISCUS_REPO, 'sander-i/sander-notes'),
+  repoId: envOr(import.meta.env.PUBLIC_GISCUS_REPO_ID, 'R_kgDOVy31SA'),
+  category: envOr(import.meta.env.PUBLIC_GISCUS_CATEGORY, 'Announcements'),
+  categoryId: envOr(import.meta.env.PUBLIC_GISCUS_CATEGORY_ID, 'DIC_kwDOVy31SM4DLeGj'),
 };
 const commentsReady = Object.values(commentsConfig).every(Boolean);
 const viewsPath = analytics.normalizePath(Astro.url.pathname);
