@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sander-notes.sander-o.workers.dev/sitemap-index.xml

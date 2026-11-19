@@ -1,0 +1,252 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light" data-base="/"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="从软件开发视角理解 CPU 缓存一致性与 MESI 协议。"><meta name="generator" content="Astro"><title>CPU的可见性 | Sander 的博客</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="canonical" href="https://sander-notes.sander-o.workers.dev/posts/cpu_visibility/"><meta property="og:type" content="article"><meta property="og:site_name" content="Sander 的博客"><meta property="og:title" content="CPU的可见性 | Sander 的博客"><meta property="og:description" content="从软件开发视角理解 CPU 缓存一致性与 MESI 协议。"><meta property="og:url" content="https://sander-notes.sander-o.workers.dev/posts/cpu_visibility/"><meta name="twitter:card" content="summary"><link rel="alternate" type="application/rss+xml" title="Sander 的博客" href="/rss.xml"><link rel="sitemap" href="/sitemap-index.xml"><script>
+      (() => {
+        const stored = localStorage.getItem('theme');
+        const preference = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = stored || preference;
+      })();
+    </script><script>(function(){const basePath = "";
+
+          window.goatcounter = {
+            path: function (p) {
+              var path = p || '/';
+              if (basePath && (path === basePath || path.indexOf(basePath + '/') === 0)) {
+                path = path.slice(basePath.length) || '/';
+              }
+              return '/' + location.hostname + path;
+            },
+          };
+        })();</script><script async src="//gc.zgo.at/count.js" data-goatcounter="https://sander.goatcounter.com/count"></script><link rel="stylesheet" href="/_astro/BaseLayout.B8hawKQ9.css"></head><body><a class="skip-link" href="#main">跳到正文</a><div class="site-shell"><header class="site-header"><a class="wordmark" href="/" aria-label="Sander 首页">Sander</a><nav aria-label="主导航"><a href="/">文章</a><a href="/search/">搜索</a><a href="/rss.xml">RSS</a><button class="theme-toggle" type="button" aria-label="切换深色模式" aria-pressed="false" title="切换深色模式"><svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg><svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.3A8.6 8.6 0 0 1 8.7 3.6 8.7 8.7 0 1 0 20.4 15.3Z"></path></svg></button></nav></header><main id="main"><article class="article" data-pagefind-body><header class="article-header"><a class="back-link" href="/">所有文章</a><h1>CPU的可见性</h1><p class="article-meta"><time datetime="2025-07-09T15:32:04.000Z">2025年7月9日</time><span>cpu</span></p><p class="article-description">从软件开发视角理解 CPU 缓存一致性与 MESI 协议。</p><p class="article-views"><span data-goatcounter-views data-code="sander" data-hosts="sander-notes.sander-o.workers.dev,sander.cloudzyro.app,sander-i.github.io" data-path="/posts/cpu_visibility/"></span></p></header><div class="prose"><p>声明</p>
+<ul>
+<li>本文内容提到的<strong>CPU</strong>仅指市面上<strong>主流</strong>的<strong>CPU</strong>，并非所有的<strong>CPU</strong>都是这种结构与处理方式</li>
+<li>本文内容对<strong>CPU</strong>的<strong>结构</strong>仅提及<strong>软件开发</strong>所需要了解的部分</li>
+<li>本文内容提供给软件开发扩展底层原理</li>
+</ul>
+<p><strong>文章中用到的名词对应解释</strong></p>
+<table>
+<thead>
+<tr>
+<th>名词</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>缓冲区（WriteBuffer）</td>
+<td>用来帮助 cpu 执行需要写入到 L1、L2、L3 高速缓存的写入操作</td>
+</tr>
+<tr>
+<td>L1、L2、L3（高速缓存）</td>
+<td>cpu 自身硬件提供的高速缓存，用来提高 cpu 访问缓存的效率</td>
+</tr>
+<tr>
+<td>缓存（Cache）</td>
+<td>通常情况下用于短暂存储数据，当不需要使用时就把数据清理掉</td>
+</tr>
+<tr>
+<td>缓存行（Cache Line）</td>
+<td>缓存被分成很多相同大小的块，这些块被称为缓存行。常用 cpu 高速缓存的缓存行大小为 64 字节</td>
+</tr>
+<tr>
+<td>缓存空间（Cache Space）</td>
+<td>与缓存是同一性质，不同称呼罢了</td>
+</tr>
+<tr>
+<td>独享（Exclusive）</td>
+<td>只有自己在用</td>
+</tr>
+<tr>
+<td>共享（Share）</td>
+<td>大家一起使用</td>
+</tr>
+<tr>
+<td>内存（Memory）</td>
+<td>内存条中用来在系统运行时存数据的空间</td>
+</tr>
+<tr>
+<td>主内存（Main Memory）</td>
+<td>所有内存条中的空间合并到一起称为主内存</td>
+</tr>
+<tr>
+<td>DMA（Cache-Coherent DMA）</td>
+<td>实现外设与内存直接进行数据传输‌，从而‌降低CPU的占用率并提升数据传输效率</td>
+</tr>
+<tr>
+<td>总线嗅探（Bus Snooping）</td>
+<td>每个CPU核心会持续监听总线上的所有事务</td>
+</tr>
+<tr>
+<td>总线广播（Bus Broadcasting）</td>
+<td>当某个CPU核心需要修改共享数据时，通过总线向所有其他核心发送通知</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cpu与主内存">CPU与主内存？</h2>
+<h3 id="cpu组成">CPU组成</h3>
+<p>CPU中有 <strong>寄存器、写缓冲区、L1、L2、L3</strong> 等</p>
+<h4 id="写缓冲区">写缓冲区</h4>
+<p>CPU厂商为了进一步提高CPU的写入效率在 <strong>L1</strong> 与 <strong>CPU核心</strong> 之间加入了 <strong>写缓冲区</strong></p>
+<p>当CPU需要对 <strong>L1、L2、L3</strong> 的 <strong>缓存行</strong> 进行写操作时，部分写操作会交由 <strong>写缓冲区</strong> 执行写操作到 <strong>L1、L2、L3</strong></p>
+<h4 id="高速缓存">高速缓存</h4>
+<p>由于<strong>CPU</strong>的<strong>执行效率</strong>远胜于<strong>主存</strong>执行读写的<strong>操作效率</strong>，<strong>CPU厂商</strong>为了提高<strong>CPU</strong>的<strong>读写性能</strong>在<strong>CPU</strong>中加入了<strong>高速缓存</strong>，<strong>高速缓存</strong>介于<strong>CPU</strong>与<strong>主存</strong>之间，用于提高<strong>CPU</strong>的读写性能</p>
+<p>L1 到 L3 数字越小离 <strong>CPU</strong> 越近，执行效率越高，<strong>缓存空间</strong> 越小</p>
+<p>L1 和 L2 缓存是单个 <strong>CPU核心</strong> 独享的 <strong>缓存空间</strong></p>
+<p>L3 是所有 <strong>CPU核心</strong> 共享的 <strong>缓存空间</strong></p>
+<p>高速缓存 <strong>L1、L2、L3</strong> 并非是一个完整的<strong>缓存空间</strong>，而是被分成大小相同的 <strong>缓存行</strong> ，目前市面上主流的 <strong>缓存行</strong> 大小为 <strong>64 字节</strong></p>
+<h3 id="主内存">主内存</h3>
+<p>所有物理内存条的 <strong>内存</strong> 合并到一起统称为 <strong>主内存</strong>，简称 <strong>主存</strong></p>
+<h4 id="cpu与主内存大致结构示意">CPU与主内存大致结构示意</h4>
+<ul>
+<li>CPU
+<ul>
+<li>CPU 核心（<strong>多个</strong>）
+<ul>
+<li>写缓冲区（WriteBuffer）</li>
+<li>L1（高速缓存）</li>
+<li>L2（高速缓存）</li>
+</ul>
+</li>
+<li>CPU 核心 2
+<ul>
+<li>写缓冲区（WriteBuffer）</li>
+<li>L1（高速缓存）</li>
+<li>L2（高速缓存）</li>
+</ul>
+</li>
+<li>L3（高速缓存）</li>
+</ul>
+</li>
+<li>主内存（Main Memory）</li>
+</ul>
+<h2 id="缓存不一致问题">缓存不一致问题？</h2>
+<p>CPU单核情况下使用**DMA（直接内存访问）**会导致的内存与缓存不一致</p>
+<ol>
+<li>选择带缓存一致性的<strong>DMA（Cache-Coherent DMA）</strong>，自动维护缓存与内存一致性</li>
+<li>选择在<strong>DMA</strong>操作前后，调用 <code>flush_cache()</code> 或 <code>invalidate_cache()</code> 等指令手动同步</li>
+</ol>
+<h3 id="cpu工作模式">CPU工作模式</h3>
+<p>CPU在单核情况下通常是不会发生缓存不一致问题的，所以这里介绍的是CPU多核模式</p>
+<p>cpu 创建变量时会依次写入 L1、L2、L3、主内存。
+cpu 获取变量时会依次访问 L1、L2、L3、主内存，拿到变量时尝试依次写入到 L3、L2、L1 中</p>
+<h3 id="缓存不一致问题是怎么发生的">缓存不一致问题是怎么发生的？</h3>
+<p>当我们在代码中创建变量 a = 1 时，CPU 将变量写入到主存中，这时 cpu 自身已经缓存了一份变量 a 的值</p>
+<p>当另外一个线程通过 cpu 2 获取变量 a 的值时，它会和 cpu 1 一样的工作模式，从 L3 中获取变量 a 并尝试依次写入 L2、L1</p>
+<p>在上述操作中 cpu 1、cpu 2 均将变量 a 的值缓存到了自身<strong>独享</strong>的<strong>高速缓存</strong>中时，某个线程通过 cpu 1 修改变量 a = 2，这时 cpu 2 缓存的变量 a 还是原来的 1，当有新线程通过 cpu 2 获取变量 a 时拿到的数据就是 <strong>脏数据</strong>（因为变量 a 最新的值还在 cpu 1 的高速缓存中）</p>
+<h2 id="mesi协议">MESI协议？</h2>
+<ul>
+<li>
+<p><strong>M（Modified）缓存行被当前核心修改，与主内存不一致</strong></p>
+<p>当前核心修改缓存行时通过总线广播通知其他核心缓存行标记为 I 失效
+当前核心访问标记 M 缓存行时，直接进行操作
+其他核心访问 M 缓存行时，会等当前核心将 M 缓存行同步主存，然后获取并将当前缓存行与其他缓存行都标记为 S 共享
+当前核心高速缓存空间不足时会将标记为 M 的缓存行同步主存</p>
+</li>
+<li>
+<p><strong>E（Exclusive）缓存行仅当前核心持有，与主内存一致</strong></p>
+<p>核心访问标记 E 的缓存行时无需任何处理
+当其他核心缓存行与主存不一致时(标记为 I 失效)，当前缓存行保持 E 独享</p>
+</li>
+<li>
+<p><strong>S（Shared）缓存行被多个核心持有，与主内存一致</strong></p>
+<p>核心访问标记 S 缓存行时无需任何处理</p>
+</li>
+<li>
+<p><strong>I（Invalid）缓存行无效，需要从主内存中重新获取</strong></p>
+<p>核心访问标记 I 的缓存行时，会等 M 缓存行的核心同步主存，然后通过主存更新当前缓存行 S 共享</p>
+</li>
+</ul>
+<h3 id="总线嗅探与总线广播">总线嗅探与总线广播？</h3>
+<h4 id="总线嗅探bus-snooping">总线嗅探（Bus Snooping）</h4>
+<p>每个CPU核心会持续监听总线上的所有事务（如读/写请求、无效化命令等），并根据监听到的消息更新本地缓存行的状态或数据。</p>
+<ul>
+<li>检测其他核心对<strong>共享数据 S</strong> 的<strong>修改</strong>或<strong>访问</strong>请求</li>
+<li>根据<strong>MESI协议</strong>规则触发本地<strong>缓存行</strong>的状态流转</li>
+</ul>
+<h4 id="总线广播bus-broadcasting">总线广播（Bus Broadcasting）</h4>
+<p>当某个CPU核心需要修改共享数据时，通过总线向所有其他核心发送通知（如无效化请求），要求它们更新或丢弃旧副本。</p>
+<ul>
+<li>声明对数据的独占访问权（当前核心修改共享数据将缓存行状态从 S 共享 变更为 M 修改）</li>
+<li>强制其他核心放弃旧副本（<strong>缓存行</strong>状态变更为 I 失效），确保<strong>修改</strong>的<strong>原子性</strong></li>
+</ul>
+<h3 id="mesi协议是怎么解决缓存不一致问题的">MESI协议是怎么解决缓存不一致问题的？</h3>
+<p>文字形式有点不便于理解，后续会贴图</p>
+<p>这里为了便于理解，操作的高速缓存为L1</p>
+<h4 id="单核操作">单核操作</h4>
+<p>初始数据</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行</span></span>
+<span class="line"><span>			a = 1</span></span></code></pre>
+<p><strong>cpu1 从主存中获取变量 a = 1 并写入到缓存行，这时cpu1 的缓存行与主存一致，所以缓存行状态为 E 独享</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（E）</span></span>
+<span class="line"><span>			a = 1</span></span></code></pre>
+<p><strong>cpu1 执行修改操作 a = 2，这时cpu1的缓存行变量 a = 2，与主存不一致，所以缓存行状态变更为 M 修改</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（M）</span></span>
+<span class="line"><span>			a = 2</span></span></code></pre>
+<p>注意：缓存的状态为 M 时，并不会<strong>主动</strong>的更新主存！</p>
+<ol>
+<li>当cpu 的高速缓存<strong>空间不足</strong>时会将状态为 M 修改的<strong>缓存行</strong>同步至<strong>主存</strong></li>
+<li>当其他 cpu 核心需要访问状态为 M 的<strong>缓存行</strong>中的变量时，会<strong>主动同步</strong>至<strong>主存</strong></li>
+</ol>
+<h4 id="多核操作">多核操作</h4>
+<p>初始数据</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span></code></pre>
+<p><strong>cpu1 从主存中获取变量 a = 1，这时cpu1 缓存行数据与主存一致，所以缓存行状态为 E 独享</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（E）</span></span>
+<span class="line"><span>			a = 1</span></span></code></pre>
+<p><strong>cpu2获取变量 a，通过总线广播通知其他持有该变量的缓存行状态变更为 S</strong>（<em>如果获取的变量在其他核心有没同步主存的情况会通知对应核心立即同步主存</em>）</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（S）</span></span>
+<span class="line"><span>			a = 1</span></span>
+<span class="line"><span>cpu2</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（S）</span></span>
+<span class="line"><span>			a = 1</span></span></code></pre>
+<p><strong>cpu1 执行修改操作 a = 4，在修改前先通过总线广播通知其他核心将变量 a 所在的缓存行标记为失效 I，这时cpu1的缓存行数据 a = 4，这时与主存不一致，所以缓存行状态为 M</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 1</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（M）</span></span>
+<span class="line"><span>			a = 4</span></span>
+<span class="line"><span>cpu2</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（I）</span></span>
+<span class="line"><span>			a = 1</span></span></code></pre>
+<p><strong>cpu2 获取或操作变量 a 时</strong>（<em>如果获取的变量在其他核心有没同步主存的情况会通知对应核心立即同步主存</em>）<strong>，发现缓存行失效，等待其他核心同步主存后获取变量 a 并更新对应缓存行，这时 cpu1、cpu2 都与主存一致，所以缓存行状态为 S</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>主存</span></span>
+<span class="line"><span>	a = 4</span></span>
+<span class="line"><span>cpu1</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（S）</span></span>
+<span class="line"><span>			a = 4</span></span>
+<span class="line"><span>cpu2</span></span>
+<span class="line"><span>	L1</span></span>
+<span class="line"><span>		缓存行（S）</span></span>
+<span class="line"><span>			a = 4</span></span></code></pre>
+<h2 id="write-buffer-写缓冲区">Write Buffer 写缓冲区？</h2>
+<p>在上述内容中我们了解了<strong>写缓冲区</strong>是<strong>CPU厂商</strong>为了进一步<strong>提高写入效率</strong>在<strong>L1</strong>与<strong>CPU内核</strong>之间用于执行<strong>部分</strong>写入操作的空间</p>
+<h3 id="写缓冲区的工作模式">写缓冲区的工作模式</h3>
+<p>当<strong>CPU内核</strong>需要执行写操作时，部分<strong>写操作</strong>会交给<strong>写缓冲区</strong>执行，由<strong>写缓冲区</strong>后续执行写操作到<strong>缓存行</strong>。</p>
+<h3 id="写缓冲区的缓存不一致问题">写缓冲区的缓存不一致问题？</h3>
+<p>由于写操作直接交给<strong>写缓冲区</strong>没有操作<strong>缓存行</strong>，所以不会触发<strong>MESI协议</strong>将其他CPU内核的<strong>缓存行</strong>标记为 I 失效，这时其他<strong>CPU内核</strong>获取<strong>缓存行</strong>数据会再次出现<strong>缓存不一致问题！</strong></p>
+<h3 id="失效广播">失效广播</h3>
+<p>CPU内核将写操作交给写缓冲区时会发送<strong>失效广播</strong>通知其他CPU内核将对应操作变量的<strong>缓存行</strong>标记为 I 失效，以此来保证触发<strong>MESI协议</strong>解决<strong>缓存一致性问题</strong></p>
+</div></article><section class="comments" aria-labelledby="comments-title"><h2 id="comments-title">评论</h2><script src="https://giscus.app/client.js" data-repo="sander-i/sander-notes" data-repo-id="R_kgDOVy31SA" data-category="Announcements" data-category-id="DIC_kwDOVy31SM4DLeGj" data-mapping="title" data-strict="0" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="zh-CN" crossorigin="anonymous" async></script></section><script type="module">var e=()=>document.documentElement.dataset.theme===`dark`?`dark`:`light`,t=()=>{document.querySelector(`iframe.giscus-frame`)?.contentWindow?.postMessage({giscus:{setConfig:{theme:e()}}},`https://giscus.app`)},n=!1,r=()=>{let e=document.querySelector(`iframe.giscus-frame`);return e?(n||=(e.addEventListener(`load`,t),!0),t(),!0):!1};if(!r()){let e=new MutationObserver(()=>{r()&&e.disconnect()});e.observe(document.body,{childList:!0,subtree:!0})}window.addEventListener(`themechange`,t);</script><script type="module">var e=document.querySelector(`[data-goatcounter-views]`),t=e=>Number(String(e??``).replace(/[^\d]/g,``))||0;if(e){let{code:n,hosts:r,path:i}=e.dataset,a=(r??``).split(`,`).filter(Boolean).map(e=>`/${e}${i}`);n&&a.length>0&&Promise.all(a.map(e=>fetch(`https://${n}.goatcounter.com/counter/${e}.json`).then(e=>e.json()).then(e=>t(e.count)).catch(()=>0))).then(t=>{let n=t.reduce((e,t)=>e+t,0);e.textContent=n>0?`阅读 ${n.toLocaleString(`zh-CN`)} 次`:``})}</script></main><footer class="site-footer"><span>© 2026 Sander</span><span>执着于理想，纯粹于当下</span></footer></div><script type="module">var e=document.querySelector(`.theme-toggle`),t=()=>{if(!e)return;let t=document.documentElement.dataset.theme===`dark`,n=t?`切换浅色模式`:`切换深色模式`;e.setAttribute(`aria-pressed`,String(t)),e.setAttribute(`aria-label`,n),e.title=n};t(),e?.addEventListener(`click`,()=>{let e=document.documentElement.dataset.theme===`dark`?`light`:`dark`;document.documentElement.dataset.theme=e,localStorage.setItem(`theme`,e),t(),window.dispatchEvent(new CustomEvent(`themechange`,{detail:{theme:e}}))});</script></body></html>
