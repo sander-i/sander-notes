@@ -46,10 +46,13 @@ button { color: inherit; font: inherit; }
 .theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .moon-icon, :root[data-theme='dark'] .sun-icon { display: none; }
 :root[data-theme='dark'] .moon-icon { display: block; }
-main { min-height: calc(100vh - 160px); }
+/* 100vh 减去页头 76px 与页脚约 53px，保证短页面不出现滚动条，页脚贴底。 */
+main { min-height: calc(100vh - 129px); }
 .intro { padding: 74px 0 62px; }
 .intro h1, .article-header h1, .search-page h1 { max-width: 720px; margin: 0; font-family: Georgia, 'Noto Serif SC', serif; font-size: clamp(32px, 6vw, 50px); font-weight: 600; line-height: 1.22; }
 .intro p { margin: 16px 0 0; color: var(--muted); font-size: 18px; }
+.intro h1, .intro p { transition: opacity 240ms ease, transform 240ms ease; }
+.intro.is-switching h1, .intro.is-switching p { opacity: 0; transform: translateY(-6px); }
 .post-list { padding-bottom: 74px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .section-heading h2, .comments h2 { margin: 0; padding-bottom: 14px; font-family: Georgia, 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; }
@@ -100,7 +103,7 @@ main { min-height: calc(100vh - 160px); }
 .search-page h1 { margin: 26px 0 28px; font-size: 36px; }
 .search-hint { color: var(--muted); font-size: 14px; }
 .search-box { --pagefind-ui-primary: var(--accent); --pagefind-ui-text: var(--ink); --pagefind-ui-background: var(--surface); --pagefind-ui-border: var(--line); --pagefind-ui-tag: var(--accent-soft); --pagefind-ui-font: system-ui, sans-serif; }
-.site-footer { display: flex; justify-content: space-between; gap: 12px; padding: 22px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.site-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 @media (max-width: 560px) {
   .site-shell { width: min(100% - 32px, 940px); }
@@ -116,7 +119,9 @@ main { min-height: calc(100vh - 160px); }
   .post-row h3 { font-size: 18px; }
   .article, .search-page { padding-top: 38px; }
   .prose { font-size: 16px; }
-  .site-footer { flex-direction: column; gap: 2px; }
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 2px; }
+  /* 移动端页头 66px + 两行页脚 74px。 */
+  main { min-height: calc(100vh - 140px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

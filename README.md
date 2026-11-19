@@ -22,7 +22,9 @@ npm run preview # 预览构建产物 http://localhost:4321/
 npm run deploy  # 构建并发布到 Cloudflare Workers
 ```
 
-注意：Pagefind 索引只在 `npm run build` 时生成，`npm run dev` 下搜索页不可用，属预期行为。
+`npm run build` 末尾会跑 `scripts/check-search.mjs` 校验搜索链路，索引缺失、页数与已发布文章数不符、文章页缺少 `data-pagefind-body`、搜索页引用路径错误，都会让构建失败。
+
+`npm run dev` 下由 `src/integrations/dev-search.mjs` 抓取 dev 服务器实际渲染的页面，实时生成 Pagefind 索引挂到 `/pagefind/*`，搜索页可直接使用；改动文章后约 1 秒内自动重建。索引写在 `.astro/pagefind`，不参与构建产物。
 
 ## 目录
 
@@ -33,7 +35,9 @@ npm run deploy  # 构建并发布到 Cloudflare Workers
 | `src/layouts/BaseLayout.astro` | 全站布局、导航、主题切换 |
 | `src/styles/global.css` | 全站样式与配色 |
 | `scripts/build-search.mjs` | 构建后生成 Pagefind 索引 |
+| `scripts/check-search.mjs` | 构建后校验搜索链路（索引页数、产物、引用路径） |
 | `scripts/build-404.mjs` | 将 `404.html` 复制为 `/404` 路由 |
+| `src/integrations/dev-search.mjs` | dev 模式实时生成并托管 Pagefind 索引 |
 | `static/` | 原样复制的静态资源（favicon、`_headers` 等） |
 | `wrangler.jsonc` | Cloudflare Workers 静态资源配置 |
 | `dist/` | 构建产物（不提交） |
@@ -115,6 +119,7 @@ MSYS_NO_PATHCONV=1 SITE_URL=https://sander-i.github.io BASE_PATH=/sander-notes n
 1. `astro build`
 2. `node scripts/build-search.mjs`（Pagefind 索引）
 3. `node scripts/build-404.mjs`（复制 `404.html` 为 `/404` 路由）
+4. `node scripts/check-search.mjs`（校验搜索链路，失败则构建失败）
 
 ### Cloudflare Workers 主站
 

@@ -2,15 +2,21 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { dateLabel } from '../lib/date';
+import { introSlides, introInterval } from '../data/intro-slides';
 
 const entries = (await getCollection('posts', ({ data }) => !data.draft))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const firstSlide = introSlides[0];
+const canRotate = introSlides.length > 1;
 ---
 <BaseLayout title="首页" description="Sander 的个人博客，记录技术、建站与日常思考。">
-  <section class="intro" aria-labelledby="intro-title">
-    <h1 id="intro-title">记录正在发生的事。</h1>
-    <p>技术、建站，以及值得留下来的想法。</p>
+  <section class="intro" aria-labelledby="intro-title" data-intro data-interval={introInterval}>
+    <h1 id="intro-title" data-intro-title>{firstSlide.title}</h1>
+    <p data-intro-description>{firstSlide.description}</p>
+    {canRotate && (
+      <script type="application/json" data-intro-slides set:html={JSON.stringify(introSlides)} />
+    )}
   </section>
   <section class="post-list" aria-labelledby="recent-title">
     <div class="section-heading">
@@ -32,4 +38,110 @@ const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
       </ol>
     ) : <p>还没有发布的文章。</p>}
   </section>
+  {canRotate && (
+    <script>
+      // 随机轮换首页标题。无 JS 或减少动效偏好下保持首条静态展示。
+      const root = document.querySelector<HTMLElement>('[data-intro]');
+      const titleEl = root?.querySelector<HTMLElement>('[data-intro-title]');
+      const descEl = root?.querySelector<HTMLElement>('[data-intro-description]');
+      const dataEl = root?.querySelector<HTMLScriptElement>('[data-intro-slides]');
+
+      if (root && titleEl && descEl && dataEl) {
+        const slides: { title: string; description: string }[] = JSON.parse(dataEl.textContent ?? '[]');
+        const interval = Number(root.dataset.interval) || 6000;
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+        if (slides.length > 1) {
+          // 先按最宽最长的一条预留高度，避免切换时下方内容跳动。
+          const probe = document.createElement('div');
+          probe.setAttribute('aria-hidden', 'true');
+          probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:0;right:0;';
+          titleEl.parentElement?.appendChild(probe);
+          let maxTitle = 0;
+          let maxDesc = 0;
+          for (const slide of slides) {
+            probe.style.width = `${titleEl.getBoundingClientRect().width}px`;
+            probe.innerHTML = `<h1 class="intro-probe">${slide.title}</h1><p class="intro-probe">${slide.description}</p>`;
+            const [h1, p] = probe.querySelectorAll<HTMLElement>('.intro-probe');
+            maxTitle = Math.max(maxTitle, h1.getBoundingClientRect().height);
+            maxDesc = Math.max(maxDesc, p.getBoundingClientRect().height);
+          }
+          probe.remove();
+          titleEl.style.minHeight = `${maxTitle}px`;
+          descEl.style.minHeight = `${maxDesc}px`;
+
+          let current = -1;
+          let timer = 0;
+          let paused = false;
+          /** 本轮还没展示过的下标，抽中即移除；空了下标重置开下一轮。 */
+          let pool: number[] = [];
+
+          const apply = (i: number) => {
+            const slide = slides[i];
+            current = i;
+            titleEl.textContent = slide.title;
+            descEl.textContent = slide.description;
+          };
+
+          /**
+           * 随机取一条本轮未展示过的下标。
+           * 本轮抽空后重置为全量，保证每轮每条各一次；
+           * 若重置后首抽正好是当前这条，换一条，避免跨轮连续重复。
+           */
+          const pickNext = () => {
+            if (pool.length === 0) pool = slides.map((_, i) => i);
+            let at = Math.floor(Math.random() * pool.length);
+            if (pool[at] === current && pool.length > 1) {
+              const alt = (at + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length;
+              [pool[at], pool[alt]] = [pool[alt], pool[at]];
+              at = alt;
+            }
+            const [next] = pool.splice(at, 1);
+            return next;
+          };
+
+          const advance = () => {
+            if (paused) return;
+            const next = pickNext();
+            root.classList.add('is-switching');
+            setTimeout(() => {
+              apply(next);
+              root.classList.remove('is-switching');
+            }, 260);
+          };
+
+          const start = () => {
+            stop();
+            // 减少动效偏好下不轮换：内容突变同样会打断阅读。
+            if (reduceMotion.matches) return;
+            timer = window.setInterval(advance, interval);
+          };
+          const stop = () => {
+            if (timer) window.clearInterval(timer);
+            timer = 0;
+          };
+
+          // 首次进入随机取一条，不固定从第一条开始；不做过渡，避免加载后闪一下。
+          // 首条也计入本轮，保证一轮内不重复。
+          pool = slides.map((_, i) => i);
+          apply(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+
+          // 悬停或键盘聚焦时暂停，避免读到一半被换掉。
+          root.addEventListener('pointerenter', () => (paused = true));
+          root.addEventListener('pointerleave', () => (paused = false));
+          root.addEventListener('focusin', () => (paused = true));
+          root.addEventListener('focusout', () => (paused = false));
+          // 标签页隐藏时停表，回来后重新开始。
+          document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+          reduceMotion.addEventListener('change', () => {
+            root.classList.remove('is-switching');
+            if (reduceMotion.matches) stop();
+            else start();
+          });
+
+          start();
+        }
+      }
+    </script>
+  )}
 </BaseLayout>

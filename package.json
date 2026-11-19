@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/build-search.mjs && node scripts/build-404.mjs",
+    "build": "astro build && node scripts/build-search.mjs && node scripts/build-404.mjs && node scripts/check-search.mjs",
     "preview": "astro preview",
     "check": "astro check",
+    "check:search": "node scripts/check-search.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {

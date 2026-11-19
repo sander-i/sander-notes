@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import devSearch from './src/integrations/dev-search.mjs';
 
 // Cloudzyro 申诉期间以 Workers 为主站；恢复后把默认值改回 Cloudzyro 即可。
 const site = process.env.SITE_URL ?? 'https://sander-notes.sander-o.workers.dev';
@@ -14,6 +15,7 @@ export default defineConfig({
     sitemap({
       filter: (page) => !page.endsWith('/search/') && !page.endsWith('/404/'),
     }),
+    devSearch(),
   ],
   markdown: {
     shikiConfig: {
